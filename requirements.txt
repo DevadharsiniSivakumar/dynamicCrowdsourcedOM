@@ -5,3 +5,4 @@ firebase-admin
 folium
 streamlit-folium
 pandas
+opencv-python-headless
