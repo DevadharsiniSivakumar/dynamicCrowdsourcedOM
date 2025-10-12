@@ -1,0 +1,7 @@
+streamlit
+ultralytics
+Pillow
+firebase-admin
+folium
+streamlit-folium
+pandas
