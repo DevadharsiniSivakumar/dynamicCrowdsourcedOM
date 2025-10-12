@@ -8,12 +8,22 @@ import folium
 from streamlit_folium import st_folium
 import pandas as pd
 
-# 1. Add geolocation package
-from streamlit_geolocation import geolocation
-
-# Firebase setup (replace with your key file)
+# --- Streamlit Cloud: Load Firebase credentials from secrets TOML ---
+firebase_config = {
+    "type": st.secrets["firebase"]["type"],
+    "project_id": st.secrets["firebase"]["project_id"],
+    "private_key_id": st.secrets["firebase"]["private_key_id"],
+    "private_key": st.secrets["firebase"]["private_key"].replace("\\n", "\n"),
+    "client_email": st.secrets["firebase"]["client_email"],
+    "client_id": st.secrets["firebase"]["client_id"],
+    "auth_uri": st.secrets["firebase"]["auth_uri"],
+    "token_uri": st.secrets["firebase"]["token_uri"],
+    "auth_provider_x509_cert_url": st.secrets["firebase"]["auth_provider_x509_cert_url"],
+    "client_x509_cert_url": st.secrets["firebase"]["client_x509_cert_url"],
+    "universe_domain": st.secrets["firebase"]["universe_domain"],
+}
 if not firebase_admin._apps:
-    cred = credentials.Certificate("dynamiccrowdsourcing-firebase-adminsdk-fbsvc-d2d0a9596a.json")
+    cred = credentials.Certificate(firebase_config)
     firebase_admin.initialize_app(cred)
 db = firestore.client()
 
@@ -26,28 +36,13 @@ page = st.sidebar.radio("Select a Page", ["📤 Upload & Detect", "🗺️ Obsta
 if page == "📤 Upload & Detect":
     st.header("Upload Outdoor Image for Obstacle Detection")
     st.write(
-        "Upload an outdoor photo (road, street, park). Add your location. "
-        "**Tip:** Click the button below to auto-capture your current GPS coordinates."
+        "Upload an outdoor photo (road, street, park), and enter your location as latitude,longitude (e.g. 12.9716,77.5946). "
+        "You can get these from Google Maps, or if running online, allow browser GPS for auto-fill."
     )
 
-    # Geolocation button and autofill
-    st.write("👇 Click below to get your real-time GPS coordinates:")
-    result = geolocation()
-    if result:
-        if result.get("coords"):
-            lat = result["coords"]["latitude"]
-            lon = result["coords"]["longitude"]
-            st.success(f"Detected location: {lat}, {lon}")
-            auto_location = f"{lat},{lon}"
-        else:
-            auto_location = ""
-    else:
-        auto_location = ""
-
-    # Use auto-captured or manual input
+    # Location input (manual while local, auto possible on Streamlit Cloud)
     location = st.text_input(
-        "Enter your location (city/area or GPS coordinates):",
-        value=auto_location
+        "Enter your location (GPS 'latitude,longitude', ex: 12.9716,77.5946):"
     )
 
     uploaded_file = st.file_uploader("Upload Your Outdoor Image", type=["jpg", "jpeg", "png"])
@@ -99,7 +94,6 @@ if page == "📤 Upload & Detect":
 elif page == "🗺️ Obstacle Map":
     st.header("Live Crowdsourced Obstacle Map")
     st.write("View all detected outdoor obstacles contributed by the crowd on an interactive map.")
-
     docs = db.collection("detections").stream()
     rows = []
     for doc in docs:
@@ -124,5 +118,5 @@ elif page == "🗺️ Obstacle Map":
             ).add_to(m)
         st_folium(m, width=700, height=500)
     else:
-        st.info("No locations with valid latitude/longitude found yet. Please allow browser to access GPS or enter coordinates in the form 'latitude,longitude'.")
+        st.info("No locations with valid latitude/longitude found yet. Please enter coordinates in the form 'latitude,longitude'.")
 
